@@ -1,0 +1,1 @@
+GEN_CSRCS += lv_font_ali_12.c lv_font_ali_16.c lv_font_ali_20.c lv_font_ali_60.c

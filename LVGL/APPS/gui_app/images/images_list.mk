@@ -1,0 +1,1 @@
+GEN_CSRCS += _temputrue_alpha_64x50.c _shidu_alpha_64x50.c

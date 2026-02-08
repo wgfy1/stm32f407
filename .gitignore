@@ -1,0 +1,42 @@
+# Build outputs
+/build/
+/Debug/
+/Release/
+*.elf
+*.bin
+*.hex
+*.axf
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+Makefile
+
+# IDEs
+.vscode/
+.vs/
+.idea/
+
+# Temp files
+*.o
+*.d
+*.log
+*.tmp
+*.swp
+*.user
+
+# Linker script or other generated files
+*.map
+
+# STM32CubeMX
+*.ioc.user
+
+# misc
+*.DS_Store
+Thumbs.db
+
+# Keep old entries
+mx.scratch
+!.settings
