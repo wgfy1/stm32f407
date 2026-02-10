@@ -23,6 +23,14 @@
 /* USER CODE BEGIN 0 */
 #include <stdio.h>
 #include <string.h>
+/* USER CODE BEGIN 0 */
+#include <stdio.h>
+#include <string.h>
+#include "esp8266.h"
+
+static uint8_t esp_rx_byte; /* used for HAL UART IT receive */
+
+/* USER CODE END 0 */
 
 /* USER CODE END 0 */
 
@@ -71,7 +79,7 @@ void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200; // 改回115200波特率
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -82,6 +90,8 @@ void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
+  /* start interrupt-driven reception for ESP8266 (1 byte) */
+  HAL_UART_Receive_IT(&huart2, &esp_rx_byte, 1);
   /* USER CODE BEGIN USART2_Init 2 */
 
   /* USER CODE END USART2_Init 2 */
@@ -129,18 +139,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     PA2     ------> USART2_TX
     PA3     ------> USART2_RX
     */
-    // TX引脚配置为推挽输出
-    GPIO_InitStruct.Pin = GPIO_PIN_2;
+    GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    
-    // RX引脚配置为复用推挽模式（在STM32F4中，UART RX使用AF_PP或AF_OD模式）
-    GPIO_InitStruct.Pin = GPIO_PIN_3;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;  // 启用上拉，提高接收稳定性
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -223,7 +224,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if(huart->Instance == USART2) 
     {
-        
+  /* forward received byte to ESP8266 handler and restart IT receive */
+  ESP8266_RxByte(esp_rx_byte);
+  HAL_UART_Receive_IT(&huart2, &esp_rx_byte, 1);
     }
 }
 
