@@ -23,6 +23,16 @@ void events_init_screen_1(lv_ui *ui);
 void events_init_screen_2(lv_ui *ui);
 void events_init_screen_3(lv_ui *ui);
 
+// 天气数据更新函数
+void update_weather_display(void);
+
+// 天气数据变量（在esp8266.c中定义）
+extern int temperature;
+extern int feels_like;
+extern float wind_speed;
+extern int wind_direction;
+extern int weather;
+
 #ifdef __cplusplus
 }
 #endif

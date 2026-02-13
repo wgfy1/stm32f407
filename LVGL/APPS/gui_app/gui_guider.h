@@ -45,6 +45,7 @@ typedef struct
 	lv_obj_t *screen_3_label_1;
 	lv_obj_t *screen_3_label_2;
 	lv_obj_t *screen_3_label_temperature;
+	lv_obj_t *screen_3_label_degree;  // ℃符号标签
 	lv_obj_t *screen_3_label_code;
 	lv_obj_t *screen_3_line_1;
 	lv_obj_t *screen_3_label_6;
@@ -53,9 +54,7 @@ typedef struct
 	lv_obj_t *screen_3_label_feels_like;
 	lv_obj_t *screen_3_label_wind_speed;
 	lv_obj_t *screen_3_label_humidity;
-	lv_obj_t *screen_3_label_12;
-	lv_obj_t *screen_3_label_13;
-	lv_obj_t *screen_3_label_14;
+
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);

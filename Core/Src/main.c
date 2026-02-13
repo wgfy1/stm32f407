@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "rtc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
@@ -35,11 +36,61 @@
 #include"string.h"
 #include "gui_guider.h"
 #include"events_init.h"
+#include "rtc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 lv_ui guider_ui;
+extern long long time;
+uint16_t current_time[7];
+char cached_time_str[10] = "00:00";
+char cached_date_str[30] = "2024/1/1";
+
+static void time_update_timer_cb(lv_timer_t * timer)
+{
+    if (lv_scr_act() != guider_ui.screen)
+    {
+        return;
+    }
+    MyRTC_ReadTimeToArray(current_time);
+    uint8_t beijing_hour = current_time[3] + 8;
+    if (beijing_hour >= 24)
+    {
+        beijing_hour -= 24;
+    }
+    char new_time_str[10], new_date_str[30];
+    sprintf(new_time_str, "%02d:%02d", beijing_hour, current_time[4]);
+    sprintf(new_date_str, "%04d/%d/%d", current_time[0], current_time[1], current_time[2]);
+    if (strcmp(new_time_str, cached_time_str) != 0 || strcmp(new_date_str, cached_date_str) != 0)
+    {
+        strcpy(cached_time_str, new_time_str);
+        strcpy(cached_date_str, new_date_str);
+        lv_label_set_text(guider_ui.screen_label_time, cached_time_str);
+        lv_label_set_text(guider_ui.screen_label_date, cached_date_str);
+    }
+}
+
+// 天气更新定时器回调（每10分钟更新一次）
+static uint32_t weather_timer_counter = 0;
+static void weather_update_timer_cb(lv_timer_t * timer)
+{
+    weather_timer_counter++;
+    
+    // 每1分钟输出一次调试信息（600 * 100ms = 60秒）
+    if (weather_timer_counter % 600 == 0)
+    {
+        printf("[定时器] 已过 %d 分钟，计数=%d\r\n", weather_timer_counter/600, weather_timer_counter);
+    }
+    // 10分钟 = 600秒，定时器周期100ms，所以计数到6000
+    if (weather_timer_counter >= 6000)
+    {
+        weather_timer_counter = 0;
+        printf("[定时器] 10分钟到达，开始更新天气...\r\n");
+        ESP8266_GetWeather();  // 获取新数据
+        update_weather_display();  // 更新显示
+    }
+}
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -104,25 +155,47 @@ int main(void)
   MX_FSMC_Init();
   MX_USART2_UART_Init();
   MX_USART1_UART_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
-  // 启动TIM2定时器中断
-  HAL_TIM_Base_Start_IT(&htim2);
+  // 连接WiFi并获取网络时间
+  ESP8266_Init();          // 连接 WiFi
+  //ESP8266_GetTime();       // 获取网络时间
+
+ 
+  //MyRTC_SetFromEpoch(time / 1000); // 转换为秒级
   
+ ESP8266_GetWeather();
+  // 启用LVGL图形界面
   lv_init();
   lv_port_disp_init();
   lv_port_indev_init();
- // lv_demo_widgets();
   setup_ui(&guider_ui);
   events_init(&guider_ui);
   
+  lv_timer_create(time_update_timer_cb, 1000, NULL);
+  
+  // 创建天气更新定时器（每100ms检查一次，每10分钟更新一次天气）
+  lv_timer_create(weather_update_timer_cb, 100, NULL);
+  
+  
+  
+  // 在所有初始化完成后再启动TIM2定时器中断
+  HAL_TIM_Base_Start_IT(&htim2);
+
+  
+
+
+ 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1) 
+  while (1)
   {
-     delay_ms(10);
-     lv_timer_handler();
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    lv_timer_handler();
   }
   /* USER CODE END 3 */
 }
@@ -144,8 +217,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;

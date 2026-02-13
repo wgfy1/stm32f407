@@ -22,6 +22,9 @@
 
 /* USER CODE BEGIN 0 */
 #include"lvgl.h"
+#include "rtc.h"
+#include "stdio.h"
+#include "gui_guider.h"
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim2;
@@ -108,16 +111,12 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 
 /* USER CODE BEGIN 1 */
 //中断服务函数
-//TIM2中断服务函数
-
 //TIM2中断回调函数
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
     {
-      lv_tick_inc(1);
-      // 闪烁LED2来验证定时器中断工作
-      HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+        lv_tick_inc(1);
     }
 }
 /* USER CODE END 1 */
