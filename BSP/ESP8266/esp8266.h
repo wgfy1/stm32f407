@@ -26,8 +26,7 @@ extern float wind_speed;
 extern int wind_direction;
 extern int humidity;
 extern char weather_description[50];
-extern int current_weekday;  // 星期（0=周日，1=周一，...，6=周六）
-extern char weekday_str[10]; // 星期字符串（如"周一"）
+extern char week_day[10];  // 星期几
 
 /* WiFi credentials (modify as needed) */
 #define ESP_WIFI_SSID "8266"

@@ -72,9 +72,9 @@ static void screen_event_handler (lv_event_t *e)
         {
             beijing_hour -= 24;
         }
-        char time_str[10], date_str[30];
+        char time_str[10], date_str[40];
         sprintf(time_str, "%02d:%02d", beijing_hour, current_time[4]);
-        sprintf(date_str, "%04d/%d/%d", current_time[0], current_time[1], current_time[2]);
+        sprintf(date_str, "%04d/%d/%d,%s", current_time[0], current_time[1], current_time[2], week_day);
         lv_label_set_text(guider_ui.screen_label_time, time_str);
         lv_label_set_text(guider_ui.screen_label_date, date_str);
         break;

@@ -123,8 +123,27 @@ float wind_speed = 0.0f;//风速
 int wind_direction = 0;//风向
 int humidity = 0;//湿度
 char weather_description[50] = {0};//天气状况文字
-int current_weekday = 0;//星期（0=周日，1=周一，...，6=周六）
-char weekday_str[10] = {0};//星期字符串
+char week_day[10] = "--";//星期几，默认为--
+
+// 根据时间戳计算星期几
+static void calculate_weekday(long long timestamp)
+{
+    // Unix时间戳转星期几 (Zeller公式简化版)
+    // 1970年1月1日是星期四
+    int days_since_1970 = (int)(timestamp / 86400);
+    int week = (days_since_1970 + 4) % 7;  // 0=周日, 1=周一, ...
+    
+    switch(week) {
+        case 0: strcpy(week_day, "星期日"); break;
+        case 1: strcpy(week_day, "星期一"); break;
+        case 2: strcpy(week_day, "星期二"); break;
+        case 3: strcpy(week_day, "星期三"); break;
+        case 4: strcpy(week_day, "星期四"); break;
+        case 5: strcpy(week_day, "星期五"); break;
+        case 6: strcpy(week_day, "星期六"); break;
+        default: strcpy(week_day, "-"); break;
+    }
+}
 
 /* Helper to send string via huart2 */
 // 发送字符串到ESP8266
@@ -560,22 +579,27 @@ void ESP8266_GetWeather(void)
     sscanf(p+15, "%49[^\"]", weather_description);
     printf("天气状况：%s\r\n", weather_description);
   }
-
-  // 解析dt时间戳并计算星期
+  
+  // 解析天气API中的时间戳 "dt"
   p = strstr(server_response, "\"dt\":");
   if (p) {
-    long timestamp = 0;
-    sscanf(p+5, "%ld", &timestamp);
-    if (timestamp > 0) {
-      // 计算星期（0=周日，1=周一，...，6=周六）
-      // 1970年1月1日是星期四，所以加4
-      current_weekday = (int)((timestamp / 86400 + 4) % 7);
-      
-      // 转换为中文星期
-      const char *weekdays[] = {"周日", "周一", "周二", "周三", "周四", "周五", "周六"};
-      strcpy(weekday_str, weekdays[current_weekday]);
-      printf("星期：%s\r\n", weekday_str);
+    char *num_start = p + 5;
+    while (*num_start && (*num_start < '0' || *num_start > '9')) num_start++;
+    
+    long long timestamp = 0;
+    while (*num_start >= '0' && *num_start <= '9') {
+      timestamp = timestamp * 10 + (*num_start - '0');
+      num_start++;
     }
+    if (timestamp > 0) {
+      time = timestamp;  // 更新全局时间变量
+      calculate_weekday(timestamp);
+      printf("时间戳：%lu, 星期：%s\r\n", (unsigned long)timestamp, week_day);
+    }
+  } else if (time > 0) {
+    // 如果没有dt字段但time已有值，使用已有值
+    // 不再重复计算，直接使用已有的week_day
+    printf("使用已有时间，星期：%s\r\n", week_day);
   }
 
   printf("解析结果：\r\n");
@@ -585,6 +609,7 @@ void ESP8266_GetWeather(void)
   printf("湿度：%d%%\r\n", humidity);
   printf("风速：%.1f km/h\r\n", wind_speed);
   printf("风向：%d°\r\n", wind_direction);
+  printf("星期：%s\r\n", week_day);
   
   // 退出透传模式
   esp_send("+++");

@@ -59,9 +59,10 @@ static void time_update_timer_cb(lv_timer_t * timer)
     {
         beijing_hour -= 24;
     }
-    char new_time_str[10], new_date_str[30];
+    extern char week_day[10];
+    char new_time_str[10], new_date_str[40];
     sprintf(new_time_str, "%02d:%02d", beijing_hour, current_time[4]);
-    sprintf(new_date_str, "%04d/%d/%d", current_time[0], current_time[1], current_time[2]);
+    sprintf(new_date_str, "%04d/%d/%d,%s", current_time[0], current_time[1], current_time[2], week_day);
     if (strcmp(new_time_str, cached_time_str) != 0 || strcmp(new_date_str, cached_date_str) != 0)
     {
         strcpy(cached_time_str, new_time_str);
@@ -69,6 +70,22 @@ static void time_update_timer_cb(lv_timer_t * timer)
         lv_label_set_text(guider_ui.screen_label_time, cached_time_str);
         lv_label_set_text(guider_ui.screen_label_date, cached_date_str);
     }
+}
+
+// 更新主屏幕日期显示（包含星期）
+void update_main_screen_date(void)
+{
+    extern uint16_t current_time[7];
+    extern lv_ui guider_ui;
+    extern char week_day[10];
+    
+    // 先读取当前RTC时间
+    MyRTC_ReadTimeToArray(current_time);
+    
+    char date_str[40];
+    sprintf(date_str, "%04d/%d/%d,%s", current_time[0], current_time[1], current_time[2], week_day);
+    lv_label_set_text(guider_ui.screen_label_date, date_str);
+    printf("[日期更新] %s\r\n", date_str);
 }
 
 // 天气更新定时器回调（每10分钟更新一次）
@@ -88,7 +105,8 @@ static void weather_update_timer_cb(lv_timer_t * timer)
         weather_timer_counter = 0;
         printf("[定时器] 10分钟到达，开始更新天气...\r\n");
         ESP8266_GetWeather();  // 获取新数据
-        update_weather_display();  // 更新显示
+        update_weather_display();  // 更新天气界面
+        update_main_screen_date();  // 更新主屏幕日期（包含星期）
     }
 }
 /* USER CODE END PTD */
@@ -171,6 +189,9 @@ int main(void)
   lv_port_indev_init();
   setup_ui(&guider_ui);
   events_init(&guider_ui);
+  
+  // 初始化完成后更新日期显示（包含星期）
+  update_main_screen_date();
   
   lv_timer_create(time_update_timer_cb, 1000, NULL);
   
