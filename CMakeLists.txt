@@ -59,6 +59,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
      ${CMAKE_CURRENT_LIST_DIR}/BSP/TOUCH/touch.c
     # 添加ESP8266驱动源文件
      ${CMAKE_CURRENT_LIST_DIR}/BSP/ESP8266/esp8266.c
+    # 添加定时器回调源文件
+     ${CMAKE_CURRENT_LIST_DIR}/Core/Src/timer_callbacks.c
     # 添加LVGL源文件
     ${LVGL_SOURCES}
     # 添加LVGL输入设备驱动源文件
@@ -91,6 +93,7 @@ ${CMAKE_CURRENT_LIST_DIR}/LVGL/APPS/gui_app/guider_fonts/lv_font_ali_60.c
 )
 
 # Add include paths
+
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     ${CMAKE_CURRENT_LIST_DIR}/BSP
@@ -98,6 +101,9 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_LIST_DIR}/BSP/LCD
     ${CMAKE_CURRENT_LIST_DIR}/BSP/TOUCH
     ${CMAKE_CURRENT_LIST_DIR}/BSP/ESP8266
+    # 添加FreeRTOS头文件路径
+    ${CMAKE_CURRENT_LIST_DIR}/Middlewares/Third_Party/FreeRTOS/Source/include
+    ${CMAKE_CURRENT_LIST_DIR}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2
     # 添加LVGL头文件路径
     ${CMAKE_CURRENT_LIST_DIR}/LVGL/LVGL_SRC/lvgl
     ${CMAKE_CURRENT_LIST_DIR}/LVGL/LVGL_SRC/lvgl/src

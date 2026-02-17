@@ -7,7 +7,7 @@
 * terms, then you may not retain, install, activate or otherwise use the software.
 */
 
-#include "events_init.h"
+#include "events_init.h"// 包含事件处理函数的头文件
 #include <stdio.h>
 #include "lvgl.h"
 #include "rtc.h"
@@ -31,6 +31,12 @@ extern char weather_description[50];
 // 更新天气显示
 void update_weather_display(void)
 {
+    // 检查当前是否在天气屏幕(screen_3)
+    if (lv_scr_act() != guider_ui.screen_3) {
+        printf("[update_weather_display] 不在天气屏幕，跳过更新\r\n");
+        return;
+    }
+    
     char temp_str[20];
     char feels_str[20];
     char wind_str[20];
@@ -57,6 +63,28 @@ void update_weather_display(void)
     
     printf("天气显示已更新：%s, 温度%s, 体感%s, 风速%s\r\n", weather_description, temp_str, feels_str, wind_str);
 }
+
+// 更新主屏幕日期显示（包含星期）
+void update_main_screen_date(void)
+{
+    // 检查当前是否在主屏幕
+    if (lv_scr_act() != guider_ui.screen) {
+        printf("[update_main_screen_date] 不在主屏幕，跳过更新\r\n");
+        return;
+    }
+    
+    uint16_t current_time[7];
+    extern char week_day[10];
+    
+    // 读取当前RTC时间
+    MyRTC_ReadTimeToArray(current_time);
+    
+    char date_str[40];
+    sprintf(date_str, "%04d/%d/%d,%s", current_time[0], current_time[1], current_time[2], week_day);
+    lv_label_set_text(guider_ui.screen_label_date, date_str);
+    printf("[update_main_screen_date] 日期已更新：%s\r\n", date_str);
+}
+
 
 
 static void screen_event_handler (lv_event_t *e)

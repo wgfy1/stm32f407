@@ -282,6 +282,30 @@ void setup_scr_screen_3(lv_ui *ui)
     lv_obj_set_style_shadow_width(ui->screen_3_label_humidity, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
 
     //The custom code of screen_3.
+    // 使用全局变量初始化天气数据，避免跳变
+    {
+        extern int temperature;
+        extern int feels_like;
+        extern int humidity;
+        extern float wind_speed;
+        extern char weather_description[50];
+        
+        char temp_str[20];
+        char feels_str[20];
+        char wind_str[20];
+        char humidity_str[20];
+        
+        sprintf(temp_str, "%d", temperature);
+        sprintf(feels_str, "%d°", feels_like);
+        sprintf(wind_str, "%.1fkm/h", wind_speed);
+        sprintf(humidity_str, "%d%%", humidity);
+        
+        lv_label_set_text(ui->screen_3_label_temperature, temp_str);
+        lv_label_set_text(ui->screen_3_label_feels_like, feels_str);
+        lv_label_set_text(ui->screen_3_label_wind_speed, wind_str);
+        lv_label_set_text(ui->screen_3_label_humidity, humidity_str);
+        lv_label_set_text(ui->screen_3_label_code, weather_description);
+    }
 
 
     //Update current screen layout.

@@ -31,7 +31,21 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include"lv_port_indev.h"
+#include"lv_port_disp.h"
+#include "lvgl.h"
+#include "events_init.h"
+#include "esp8266.h"
+#include "stdio.h"
+#include"string.h"
+#include "gui_guider.h"
+#include"events_init.h"
+#include "rtc.h"
+#include "touch.h"
+#include "FreeRTOS.h"
+#include "timer_callbacks.h"
+#include"lcd.h"
+#include"delay.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/

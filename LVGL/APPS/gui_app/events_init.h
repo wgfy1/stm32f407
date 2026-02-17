@@ -26,6 +26,9 @@ void events_init_screen_3(lv_ui *ui);
 // 天气数据更新函数
 void update_weather_display(void);
 
+// 更新主屏幕日期显示（包含星期）
+void update_main_screen_date(void);
+
 // 天气数据变量（在esp8266.c中定义）
 extern int temperature;
 extern int feels_like;

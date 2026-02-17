@@ -18,97 +18,29 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "rtc.h"
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 #include "fsmc.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include<stdio.h>
-#include"delay.h"
-#include"lvgl.h"
-#include"lv_port_indev.h"
-#include"lv_port_disp.h"
-#include"lcd.h"
-#include"esp8266.h"
-#include"string.h"
-#include "gui_guider.h"
-#include"events_init.h"
-#include "rtc.h"
+
 /* USER CODE END Includes */
+/* Private variables ---------------------------------------------------------*/
+/* USER CODE BEGIN PV */
+// 外部声明FreeRTOS对象
+extern osSemaphoreId_t weatherSemaphoreHandle;
+/* USER CODE END PV */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-lv_ui guider_ui;
-extern long long time;
-uint16_t current_time[7];
-char cached_time_str[10] = "00:00";
-char cached_date_str[30] = "2024/1/1";
-
-static void time_update_timer_cb(lv_timer_t * timer)
-{
-    if (lv_scr_act() != guider_ui.screen)
-    {
-        return;
-    }
-    MyRTC_ReadTimeToArray(current_time);
-    uint8_t beijing_hour = current_time[3] + 8;
-    if (beijing_hour >= 24)
-    {
-        beijing_hour -= 24;
-    }
-    extern char week_day[10];
-    char new_time_str[10], new_date_str[40];
-    sprintf(new_time_str, "%02d:%02d", beijing_hour, current_time[4]);
-    sprintf(new_date_str, "%04d/%d/%d,%s", current_time[0], current_time[1], current_time[2], week_day);
-    if (strcmp(new_time_str, cached_time_str) != 0 || strcmp(new_date_str, cached_date_str) != 0)
-    {
-        strcpy(cached_time_str, new_time_str);
-        strcpy(cached_date_str, new_date_str);
-        lv_label_set_text(guider_ui.screen_label_time, cached_time_str);
-        lv_label_set_text(guider_ui.screen_label_date, cached_date_str);
-    }
-}
-
-// 更新主屏幕日期显示（包含星期）
-void update_main_screen_date(void)
-{
-    extern uint16_t current_time[7];
-    extern lv_ui guider_ui;
-    extern char week_day[10];
-    
-    // 先读取当前RTC时间
-    MyRTC_ReadTimeToArray(current_time);
-    
-    char date_str[40];
-    sprintf(date_str, "%04d/%d/%d,%s", current_time[0], current_time[1], current_time[2], week_day);
-    lv_label_set_text(guider_ui.screen_label_date, date_str);
-    printf("[日期更新] %s\r\n", date_str);
-}
-
-// 天气更新定时器回调（每10分钟更新一次）
-static uint32_t weather_timer_counter = 0;
-static void weather_update_timer_cb(lv_timer_t * timer)
-{
-    weather_timer_counter++;
-    
-    // 每1分钟输出一次调试信息（600 * 100ms = 60秒）
-    if (weather_timer_counter % 600 == 0)
-    {
-        printf("[定时器] 已过 %d 分钟，计数=%d\r\n", weather_timer_counter/600, weather_timer_counter);
-    }
-    // 10分钟 = 600秒，定时器周期100ms，所以计数到6000
-    if (weather_timer_counter >= 6000)
-    {
-        weather_timer_counter = 0;
-        printf("[定时器] 10分钟到达，开始更新天气...\r\n");
-        ESP8266_GetWeather();  // 获取新数据
-        update_weather_display();  // 更新天气界面
-        update_main_screen_date();  // 更新主屏幕日期（包含星期）
-    }
-}
+lv_ui guider_ui;// 全局变量，存储界面元素
+extern long long time;// 存储从网络获取的时间戳（毫秒级）
+uint16_t current_time[7];// 存储RTC时间的数组：年、月、日、时、分、秒、星期
+char cached_time_str[10] = "00:00";// 初始值，确保第一次更新时会刷新显示
+char cached_date_str[30] = "2024/1/1";// 初始值，确保第一次更新时会刷新显示
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -125,12 +57,11 @@ static void weather_update_timer_cb(lv_timer_t * timer)
 
 /* USER CODE BEGIN PV */
 
-
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -178,11 +109,8 @@ int main(void)
   // 连接WiFi并获取网络时间
   ESP8266_Init();          // 连接 WiFi
   //ESP8266_GetTime();       // 获取网络时间
-
- 
   //MyRTC_SetFromEpoch(time / 1000); // 转换为秒级
-  
- ESP8266_GetWeather();
+  ESP8266_GetWeather();
   // 启用LVGL图形界面
   lv_init();
   lv_port_disp_init();
@@ -193,28 +121,26 @@ int main(void)
   // 初始化完成后更新日期显示（包含星期）
   update_main_screen_date();
   
-  lv_timer_create(time_update_timer_cb, 1000, NULL);
-  
-  // 创建天气更新定时器（每100ms检查一次，每10分钟更新一次天气）
-  lv_timer_create(weather_update_timer_cb, 100, NULL);
-  
-  
-  
+  lv_timer_create(time_update_timer_cb, 1000, NULL);// 1秒更新一次时间
+  lv_timer_create(weather_update_timer_cb, 100, NULL);// 100ms检查一次，10分钟更新一次天气
   // 在所有初始化完成后再启动TIM2定时器中断
   HAL_TIM_Base_Start_IT(&htim2);
-
-  
-
-
- 
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+
+  MX_FREERTOS_Init();
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
     lv_timer_handler();
   }
@@ -270,6 +196,15 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM4 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
 
 /**
   * @brief  This function is executed in case of error occurrence.

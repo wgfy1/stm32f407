@@ -333,44 +333,47 @@ void ESP8266_GetWeather(void)
   ESP8266_ClearBuf();
   ESP8266_UART_StartReceive();
   printf("==========开始获取天气数据==========\r\n");
-  
-  // 确保退出透传模式并关闭现有连接
-  printf("确保ESP8266处于正常状态...\r\n");
-  // 多次发送+++确保退出透传模式
-  esp_send("+++");
   delay_ms(500);
-  esp_send("+++");
-  delay_ms(500);
-  esp_send("+++");
-  delay_ms(1000);
-  ESP8266_ClearBuf();
   
-  // 关闭任何现有连接
-  esp_send("AT+CIPCLOSE\r\n");
-  delay_ms(1000);
-  ESP8266_ClearBuf();
-  
-  // 确保处于非透传模式
-  esp_send("AT+CIPMODE=0\r\n");
-  delay_ms(500);
-  ESP8266_ClearBuf();
-  
-  // 检查WiFi连接状态
-  printf("检查WiFi连接状态...\r\n");
-  esp_send("AT+CIPSTATUS\r\n");
-  delay_ms(1000);
-  printf("WiFi状态：%s\r\n", rx_buf);
-  ESP8266_ClearBuf();
-  
+  // 1. 连接天气服务器TCP，带重试机制
+  int server_retry = 0;
+  int connected = 0;
   char cmd[256];
-  // 使用OpenWeatherMap HTTP API（支持体感温度和风速）
-  snprintf(cmd, sizeof(cmd), "AT+CIPSTART=\"TCP\",\"%s\",80\r\n", "api.openweathermap.org");
-  esp_send(cmd);
-  printf("正在连接服务器...\r\n");
-  delay_ms(10000);
-
-  if (strstr(rx_buf, "CONNECT") == NULL && strstr(rx_buf, "CONNECTOK") == NULL) {
-    printf("服务器连接失败！返回数据：%s\r\n", rx_buf);
+  
+  while (server_retry < 3 && !connected) {
+    snprintf(cmd, sizeof(cmd), "AT+CIPSTART=\"TCP\",\"%s\",80\r\n", "api.openweathermap.org");
+    esp_send(cmd);
+    printf("正在连接天气服务器... (尝试 %d/3)\r\n", server_retry + 1);
+    
+    // 等待连接结果
+    int connect_wait = 0;
+    while (connect_wait < 50) {  // 5秒超时
+      delay_ms(100);
+      connect_wait++;
+      if (strstr(rx_buf, "CONNECT") != NULL || strstr(rx_buf, "CONNECTOK") != NULL) {
+        connected = 1;
+        break;
+      }
+      if (strstr(rx_buf, "ERROR") != NULL || strstr(rx_buf, "CLOSED") != NULL) {
+        break;  // 连接失败
+      }
+    }
+    
+    if (!connected) {
+      printf("服务器连接失败！返回：%s\r\n", rx_buf);
+      ESP8266_ClearBuf();
+      esp_send("AT+CIPCLOSE\r\n");
+      delay_ms(500);
+      ESP8266_ClearBuf();
+      server_retry++;
+      if (server_retry < 3) {
+        printf("等待2秒后重试...\r\n");
+        delay_ms(2000);
+      }
+    }
+  }
+  if (!connected) {
+    printf("服务器连接失败，已重试3次，跳过本次更新\r\n");
     return;
   }
   printf("服务器连接成功！\r\n");
@@ -378,7 +381,7 @@ void ESP8266_GetWeather(void)
   // 设置为透传模式
   ESP8266_ClearBuf();
   esp_send("AT+CIPMODE=1\r\n");
-  delay_ms(500);
+  delay_ms(1000);
   if (strstr(rx_buf, "OK") == NULL) {
     printf("设置透传模式失败：%s\r\n", rx_buf);
     return;
@@ -399,19 +402,11 @@ void ESP8266_GetWeather(void)
     ESP8266_ClearBuf();
     retry++;
   }
-  
-  if (retry >= 3) {
-    printf("进入透传模式失败，返回非透传模式尝试\r\n");
-    // 回退到非透传模式
-    ESP8266_ClearBuf();
-    // ... 这里可以添加非透传模式的代码
-    return;
-  }
-  
-  delay_ms(500);  // 等待一下确保">"已经接收
+
+  delay_ms(800);  // 等待一下确保">"已经接收
   ESP8266_ClearBuf();  // 清除">"和其他残留数据
   
-  // 发送HTTP请求（透传模式下直接发送，不需要AT+CIPSEND）
+  // 3. 发送天气请求（透传模式下直接发送）
   char http_req[512];
   int len = snprintf(http_req, sizeof(http_req), 
       "GET /data/2.5/weather?q=Hangzhou,CN&appid=9206757c5503e7d9e53ae6582464d2e2&units=metric&lang=zh_cn HTTP/1.1\r\n"
@@ -438,12 +433,10 @@ void ESP8266_GetWeather(void)
       delay_ms(1000);  // 再等待1秒确保数据完整
       break;
     }
-  }
-  
+  } 
   if (wait_time >= 150) {
     printf("等待超时，未收到服务器响应\r\n");
   }
-
   char server_response[2048] = {0};
   
   // 透传模式下，数据直接存放在rx_buf中
@@ -451,7 +444,8 @@ void ESP8266_GetWeather(void)
   memcpy(server_response, rx_buf, copy_len);
   server_response[copy_len] = '\0';
   
-  printf("服务器返回数据（长度%d）：\r\n%s\r\n", rx_len, server_response);
+ // printf("服务器返回数据（长度%d）：\r\n%s\r\n", rx_len, server_response);
+
   
   char *p;
   // OpenWeatherMap API解析
@@ -611,9 +605,14 @@ void ESP8266_GetWeather(void)
   printf("风向：%d°\r\n", wind_direction);
   printf("星期：%s\r\n", week_day);
   
-  // 退出透传模式
+  // 4. 退出透传模式
+  printf("退出透传模式\r\n");
+  delay_ms(1500);
   esp_send("+++");
-  delay_ms(1000);
+  delay_ms(2000);
+  
+  // 5. 关闭天气服务器TCP连接
+  ESP8266_ClearBuf();
   esp_send("AT+CIPCLOSE\r\n");
   delay_ms(800);
   printf("==========天气数据获取结束==========\r\n");
