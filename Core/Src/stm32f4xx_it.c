@@ -167,7 +167,8 @@ void DebugMon_Handler(void)
 void EXTI9_5_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI9_5_IRQn 0 */
-
+  extern void Backlight_Activity(void);
+  Backlight_Activity();
   /* USER CODE END EXTI9_5_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(T_PEN_Pin);
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */

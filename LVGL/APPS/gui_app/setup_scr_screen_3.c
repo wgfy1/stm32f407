@@ -240,7 +240,7 @@ void setup_scr_screen_3(lv_ui *ui)
     lv_label_set_text(ui->screen_3_label_wind_speed, "15");
     lv_label_set_long_mode(ui->screen_3_label_wind_speed, LV_LABEL_LONG_WRAP);
     lv_obj_set_pos(ui->screen_3_label_wind_speed, 110, 195);
-    lv_obj_set_size(ui->screen_3_label_wind_speed, 70, 15);
+    lv_obj_set_size(ui->screen_3_label_wind_speed, 100, 15);
 
     //Write style for screen_3_label_wind_speed, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_border_width(ui->screen_3_label_wind_speed, 0, LV_PART_MAIN|LV_STATE_DEFAULT);

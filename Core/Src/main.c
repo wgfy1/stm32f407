@@ -24,15 +24,11 @@
 #include "usart.h"
 #include "gpio.h"
 #include "fsmc.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
-/* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
-// 外部声明FreeRTOS对象
-extern osSemaphoreId_t weatherSemaphoreHandle;
-/* USER CODE END PV */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
@@ -56,7 +52,8 @@ char cached_date_str[30] = "2024/1/1";// 初始值，确保第一次更新时会
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+// 外部声明FreeRTOS对象
+extern osSemaphoreId_t weatherSemaphoreHandle;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,9 +105,17 @@ int main(void)
   /* USER CODE BEGIN 2 */
   // 连接WiFi并获取网络时间
   ESP8266_Init();          // 连接 WiFi
+  ESP8266_MQTT_Init();
   //ESP8266_GetTime();       // 获取网络时间
-  //MyRTC_SetFromEpoch(time / 1000); // 转换为秒级
+  //MyRTC_SetFromEpoch((time / 1000)+9); // 转换为秒级
   ESP8266_GetWeather();
+   extern int temperature;
+    extern int humidity;
+      char mqtt_data[128];
+      snprintf(mqtt_data, sizeof(mqtt_data), 
+               "{\"temp\":%d,\"humidity\":%d,\"location\":\"%s\"}",
+               temperature, humidity, YOUR_LOCATION);
+      ESP8266_MQTT_Publish(mqtt_data);
   // 启用LVGL图形界面
   lv_init();
   lv_port_disp_init();
@@ -129,8 +134,8 @@ int main(void)
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
-
   MX_FREERTOS_Init();
+
   /* Start scheduler */
   osKernelStart();
 
@@ -141,8 +146,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
-    lv_timer_handler();
   }
   /* USER CODE END 3 */
 }

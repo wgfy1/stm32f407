@@ -32,7 +32,29 @@ extern char week_day[10];  // 星期几
 #define ESP_WIFI_SSID "8266"
 #define ESP_WIFI_PASS "123456789"
 
-#define YOUR_API_KEY "e3fb4fd7b7eb4d45ad31f857288114eb" //密钥
-#define YOUR_LOCATION "101200501" //黄冈市
+#define YOUR_API_KEY "9206757c5503e7d9e53ae6582464d2e2" //密钥
+#define YOUR_LOCATION "Hangzhou" //杭州市
+
+/* WiFi connection status */
+extern volatile uint8_t wifi_connected;      // WiFi连接状态: 0=断开, 1=已连接
+extern volatile uint8_t wifi_reconnect_count; // 重连计数
+
+/* Reconnection functions */
+int ESP8266_CheckConnection(void);           // 检查WiFi连接状态
+int ESP8266_Reconnect(void);                // 断线重连
+void ESP8266_ResetReconnectCount(void);     // 重置重连计数
+
+/* MQTT functions */
+#define MQTT_BROKER     "broker.hivemq.com"   // 公共MQTT服务器
+#define MQTT_PORT       1883
+#define MQTT_CLIENT_ID  "STM32F407_Weather"
+#define MQTT_TOPIC_PUB  "stm32/weather/data"   // 发布主题
+#define MQTT_TOPIC_SUB  "stm32/weather/cmd"    // 订阅主题
+
+int ESP8266_MQTT_Init(void);                 // 初始化MQTT连接
+int ESP8266_MQTT_Publish(const char *data);  // 发布消息
+int ESP8266_MQTT_Subscribe(void);            // 订阅主题
+int ESP8266_MQTT_CheckMessage(char *topic, char *message, int max_len); // 检查接收消息
+void ESP8266_MQTT_Disconnect(void);          // 断开MQTT连接
 
 #endif

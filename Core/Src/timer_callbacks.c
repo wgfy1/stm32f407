@@ -103,8 +103,8 @@ void weather_update_timer_cb(lv_timer_t * timer)
         printf("[定时器] 已过 %d 分钟，计数=%d，空闲内存=%u\r\n", 
                weather_timer_counter/600, weather_timer_counter, get_free_memory());
     }
-    // 2分钟 = 120秒，定时器周期100ms，所以计数到1200
-    if (weather_timer_counter >= 1200)
+    //十分钟更新一次
+    if (weather_timer_counter >= 6000)
     {
         weather_timer_counter = 0;
         printf("[定时器] 10分钟到达，通知天气任务更新...\r\n");

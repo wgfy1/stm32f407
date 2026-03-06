@@ -33,7 +33,7 @@ static uint8_t esp_rx_byte; /* used for HAL UART IT receive */
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
-UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart2;// UART2句柄
 
 /* USART1 init function */
 
